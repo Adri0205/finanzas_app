@@ -1,89 +1,50 @@
-import React, {
+import { useState } from "react";
 
-  useState
+import axios from "axios";
 
-} from 'react';
-
-import axios from 'axios';
-
-import {
-
-  View,
-  Text,
-  TextInput,
-  Button
-
-} from 'react-native';
+import { Button, TextInput, View } from "react-native";
 
 export default function AddTransactionScreen() {
+  const [monto, setMonto] = useState("");
 
-  const [monto, setMonto] =
-    useState('');
+  const [tipo, setTipo] = useState("");
 
-  const [tipo, setTipo] =
-    useState('');
+  const [categoria, setCategoria] = useState("");
 
-  const [categoria, setCategoria] =
-    useState('');
+  const [cuenta, setCuenta] = useState("");
 
-  const [cuenta, setCuenta] =
-    useState('');
-
-  const [descripcion, setDescripcion] =
-    useState('');
-
+  const [descripcion, setDescripcion] = useState("");
 
   const guardar = async () => {
-
-    if (
-      !monto ||
-      !tipo ||
-      !categoria ||
-      !cuenta
-    ) {
-
-      alert('Complete todos los campos');
+    if (!monto || !tipo || !categoria || !cuenta) {
+      alert("Complete todos los campos");
 
       return;
-
     }
 
     try {
+      await axios.post("http://192.168.1.20:3000/api/transactions", {
+        monto,
+        tipo,
+        categoria,
+        cuenta,
+        descripcion,
+      });
 
-      await axios.post(
-        'http://10.0.2.2:3000/api/transactions',
-        {
+      alert("Guardado");
 
-          monto,
-          tipo,
-          categoria,
-          cuenta,
-          descripcion
-
-        }
-      );
-
-      alert('Guardado');
-
-      setMonto('');
-      setTipo('');
-      setCategoria('');
-      setCuenta('');
-      setDescripcion('');
-
+      setMonto("");
+      setTipo("");
+      setCategoria("");
+      setCuenta("");
+      setDescripcion("");
     } catch (error) {
-
       console.log(error);
-
     }
-
   };
 
-
   return (
-
     <View style={{ padding: 20 }}>
-
       <TextInput
         placeholder="Monto"
         keyboardType="numeric"
@@ -92,7 +53,7 @@ export default function AddTransactionScreen() {
         style={{
           borderWidth: 1,
           marginBottom: 10,
-          padding: 10
+          padding: 10,
         }}
       />
 
@@ -103,7 +64,7 @@ export default function AddTransactionScreen() {
         style={{
           borderWidth: 1,
           marginBottom: 10,
-          padding: 10
+          padding: 10,
         }}
       />
 
@@ -114,7 +75,7 @@ export default function AddTransactionScreen() {
         style={{
           borderWidth: 1,
           marginBottom: 10,
-          padding: 10
+          padding: 10,
         }}
       />
 
@@ -125,7 +86,7 @@ export default function AddTransactionScreen() {
         style={{
           borderWidth: 1,
           marginBottom: 10,
-          padding: 10
+          padding: 10,
         }}
       />
 
@@ -136,17 +97,11 @@ export default function AddTransactionScreen() {
         style={{
           borderWidth: 1,
           marginBottom: 10,
-          padding: 10
+          padding: 10,
         }}
       />
 
-      <Button
-        title="Guardar"
-        onPress={guardar}
-      />
-
+      <Button title="Guardar" onPress={guardar} />
     </View>
-
   );
-
 }

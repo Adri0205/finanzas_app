@@ -1,104 +1,118 @@
-const db = require('../config/db');
+const db = require("../config/db");
 
-
-// OBTENER TODAS
+// OBTENER TRANSACCIONES DEL USUARIO
 
 const getTransactions = (req, res) => {
-
-  const sql =
-    'SELECT * FROM transactions';
-
-  db.query(sql, (error, results) => {
-
-    if (error) {
-
-      res.status(500).json(error);
-
-    } else {
-
-      res.json(results);
-
-    }
-
-  });
-
-};
-
-
-// CREAR
-
-const createTransaction = (req, res) => {
-
-  const {
-
-    monto,
-    tipo,
-    categoria,
-    cuenta,
-    descripcion
-
-  } = req.body;
-
+  const user_id = req.user.id;
 
   const sql = `
 
-    INSERT INTO transactions
-    (monto, tipo, categoria, cuenta, descripcion)
+    SELECT
+      t.*,
+      a.name AS account_name,
+      c.name AS category_name
 
-    VALUES (?, ?, ?, ?, ?)
+    FROM transactions t
+
+    INNER JOIN accounts a
+      ON t.account_id = a.id
+
+    INNER JOIN categories c
+      ON t.category_id = c.id
+
+    WHERE t.user_id = ?
+
+    ORDER BY t.transaction_date DESC
 
   `;
 
   db.query(
+    sql,
 
+    [user_id],
+
+    (error, results) => {
+      if (error) {
+        return res.status(500).json(error);
+      }
+
+      res.json(results);
+    },
+  );
+};
+
+// CREAR TRANSACCIÓN
+
+const createTransaction = (req, res) => {
+  const user_id = req.user.id;
+
+  const {
+    account_id,
+    category_id,
+    amount,
+    type,
+    description,
+    transaction_date,
+  } = req.body;
+
+  const sql = `
+
+    INSERT INTO transactions
+
+    (
+      user_id,
+      account_id,
+      category_id,
+      amount,
+      type,
+      description,
+      transaction_date
+    )
+
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+
+  `;
+
+  db.query(
     sql,
 
     [
-      monto,
-      tipo,
-      categoria,
-      cuenta,
-      descripcion
+      user_id,
+      account_id,
+      category_id,
+      amount,
+      type,
+      description,
+      transaction_date,
     ],
 
     (error, result) => {
-
       if (error) {
-
-        res.status(500).json(error);
-
-      } else {
-
-        res.json({
-          message:
-            'Transacción creada'
-        });
-
+        return res.status(500).json(error);
       }
 
-    }
-
+      res.json({
+        message: "Transacción creada",
+      });
+    },
   );
-
 };
-
 
 // ACTUALIZAR
 
 const updateTransaction = (req, res) => {
-
   const { id } = req.params;
 
+  const user_id = req.user.id;
+
   const {
-
-    monto,
-    tipo,
-    categoria,
-    cuenta,
-    descripcion
-
+    account_id,
+    category_id,
+    amount,
+    type,
+    description,
+    transaction_date,
   } = req.body;
-
 
   const sql = `
 
@@ -106,94 +120,78 @@ const updateTransaction = (req, res) => {
 
     SET
 
-      monto=?,
-      tipo=?,
-      categoria=?,
-      cuenta=?,
-      descripcion=?
+      account_id=?,
+      category_id=?,
+      amount=?,
+      type=?,
+      description=?,
+      transaction_date=?
 
-    WHERE id=?
+    WHERE id=? AND user_id=?
 
   `;
 
-
   db.query(
-
     sql,
 
     [
-      monto,
-      tipo,
-      categoria,
-      cuenta,
-      descripcion,
-      id
+      account_id,
+      category_id,
+      amount,
+      type,
+      description,
+      transaction_date,
+      id,
+      user_id,
     ],
 
     (error, result) => {
-
       if (error) {
-
-        res.status(500).json(error);
-
-      } else {
-
-        res.json({
-          message:
-            'Actualizada'
-        });
-
+        return res.status(500).json(error);
       }
 
-    }
-
+      res.json({
+        message: "Transacción actualizada",
+      });
+    },
   );
-
 };
-
 
 // ELIMINAR
 
 const deleteTransaction = (req, res) => {
-
   const { id } = req.params;
 
-  const sql =
-    'DELETE FROM transactions WHERE id=?';
+  const user_id = req.user.id;
+
+  const sql = `
+
+    DELETE FROM transactions
+
+    WHERE id=? AND user_id=?
+
+  `;
 
   db.query(
-
     sql,
 
-    [id],
+    [id, user_id],
 
     (error, result) => {
-
       if (error) {
-
-        res.status(500).json(error);
-
-      } else {
-
-        res.json({
-          message:
-            'Eliminada'
-        });
-
+        return res.status(500).json(error);
       }
 
-    }
-
+      res.json({
+        message: "Transacción eliminada",
+      });
+    },
   );
-
 };
 
-
 module.exports = {
-
   getTransactions,
   createTransaction,
   updateTransaction,
-  deleteTransaction
-
+  deleteTransaction,
 };

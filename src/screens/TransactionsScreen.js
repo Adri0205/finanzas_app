@@ -1,114 +1,69 @@
-import React, {
+import { useEffect, useState } from "react";
 
-  useEffect,
-  useState
+import axios from "axios";
 
-} from 'react';
-
-import axios from 'axios';
-
-import {
-
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  Alert
-
-} from 'react-native';
+import { Alert, FlatList, Text, TouchableOpacity, View } from "react-native";
 
 export default function TransactionsScreen() {
-
-  const [transactions, setTransactions] =
-    useState([]);
-
+  const [transactions, setTransactions] = useState([]);
 
   // OBTENER DATOS
 
-  const obtenerTransacciones =
-    async () => {
+  const obtenerTransacciones = async () => {
+    try {
+      const response = await axios.get(
+        "http://192.168.1.20:3000/api/transactions",
+      );
 
-      try {
-
-        const response =
-          await axios.get(
-            'http://10.0.2.2:3000/api/transactions'
-          );
-
-        setTransactions(response.data);
-
-      } catch (error) {
-
-        console.log(error);
-
-      }
-
-    };
-
+      setTransactions(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   useEffect(() => {
-
     obtenerTransacciones();
-
   }, []);
-
 
   // ELIMINAR
 
   const eliminar = (id) => {
-
     Alert.alert(
+      "Eliminar",
 
-      'Eliminar',
-
-      '¿Desea eliminar esta transacción?',
+      "¿Desea eliminar esta transacción?",
 
       [
-
         {
-          text: 'Cancelar'
+          text: "Cancelar",
         },
 
         {
-
-          text: 'Eliminar',
+          text: "Eliminar",
 
           onPress: async () => {
-
             try {
-
               await axios.delete(
-                `http://10.0.2.2:3000/api/transactions/${id}`
+                `http://192.168.1.20:3000/api/transactions/${id}`,
               );
 
               obtenerTransacciones();
-
             } catch (error) {
-
               console.log(error);
-
             }
-
-          }
-
-        }
-
-      ]
-
+          },
+        },
+      ],
     );
-
   };
 
-
   return (
-
     <View style={{ padding: 20 }}>
-
       <Text
         style={{
           fontSize: 25,
-          fontWeight: 'bold',
-          marginBottom: 20
+          fontWeight: "bold",
+          marginBottom: 20,
         }}
       >
         Transacciones
@@ -117,49 +72,26 @@ export default function TransactionsScreen() {
       <FlatList
         data={transactions}
         keyExtractor={(item) => item.id}
-
         renderItem={({ item }) => (
-
           <TouchableOpacity
-
-            onLongPress={() =>
-              eliminar(item.id)
-            }
-
+            onLongPress={() => eliminar(item.id)}
             style={{
-              backgroundColor: '#ddd',
+              backgroundColor: "#ddd",
               padding: 15,
               borderRadius: 10,
-              marginBottom: 10
+              marginBottom: 10,
             }}
           >
-
             <Text>
-
-              {item.tipo === 'ingreso'
-                ? '+'
-                : '-'}
-
-              ${item.monto}
-
+              {item.tipo === "ingreso" ? "+" : "-"}${item.monto}
             </Text>
 
-            <Text>
-              {item.categoria}
-            </Text>
+            <Text>{item.categoria}</Text>
 
-            <Text>
-              {item.cuenta}
-            </Text>
-
+            <Text>{item.cuenta}</Text>
           </TouchableOpacity>
-
         )}
-
       />
-
     </View>
-
   );
-
 }
