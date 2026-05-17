@@ -1,23 +1,21 @@
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    Button,
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Button,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import API from "../api/api";
-
 
 const typeOptions = [
   { value: "ingreso", label: "Ingreso" },
   { value: "gasto", label: "Gasto" },
 ];
-
 
 export default function TransactionForm({
   initialValues,
@@ -36,7 +34,6 @@ export default function TransactionForm({
   );
   const [accounts, setAccounts] = useState([]);
 
-
   useEffect(() => {
     setAmount(String(initialValues.amount || ""));
     setType(initialValues.type || "ingreso");
@@ -48,7 +45,6 @@ export default function TransactionForm({
     );
   }, [initialValues]);
 
-
   useEffect(() => {
     const loadAccounts = async () => {
       try {
@@ -59,10 +55,8 @@ export default function TransactionForm({
       }
     };
 
-
     loadAccounts();
   }, []);
-
 
   const handleSubmit = () => {
     if (
@@ -76,15 +70,12 @@ export default function TransactionForm({
       return;
     }
 
-
     const parsedAmount = Number(amount);
-
 
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       Alert.alert("Error", "Ingrese un monto válido mayor que cero.");
       return;
     }
-
 
     onSubmit({
       amount: parsedAmount,
@@ -96,7 +87,6 @@ export default function TransactionForm({
     });
   };
 
-
   return (
     <View style={styles.form}>
       <Text style={styles.label}>Monto</Text>
@@ -107,7 +97,6 @@ export default function TransactionForm({
         onChangeText={setAmount}
         style={styles.input}
       />
-
 
       <Text style={styles.label}>Tipo</Text>
       <View style={styles.typeRow}>
@@ -132,7 +121,6 @@ export default function TransactionForm({
         ))}
       </View>
 
-
       <Text style={styles.label}>Categoría</Text>
       <TextInput
         placeholder="Ej. Comida"
@@ -140,7 +128,6 @@ export default function TransactionForm({
         onChangeText={setCategory}
         style={styles.input}
       />
-
 
       <Text style={styles.label}>Cuenta</Text>
       <TextInput
@@ -168,7 +155,6 @@ export default function TransactionForm({
         </View>
       ) : null}
 
-
       <Text style={styles.label}>Fecha</Text>
       <TextInput
         placeholder="YYYY-MM-DD"
@@ -176,7 +162,6 @@ export default function TransactionForm({
         onChangeText={setTransactionDate}
         style={styles.input}
       />
-
 
       <Text style={styles.label}>Descripción</Text>
       <TextInput
@@ -187,12 +172,10 @@ export default function TransactionForm({
         multiline
       />
 
-
       <Button title={submitLabel} onPress={handleSubmit} />
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   form: {

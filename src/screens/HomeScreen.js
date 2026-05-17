@@ -23,6 +23,13 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.buttonText}>View Transactions</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate("Accounts")}
+      >
+        <Text style={styles.buttonText}>View Accounts</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.button} onPress={logout}>
         <Text style={styles.buttonText}>Logout</Text>
       </TouchableOpacity>
