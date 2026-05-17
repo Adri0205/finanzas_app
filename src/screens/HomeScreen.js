@@ -1,15 +1,27 @@
 import { useContext } from "react";
-
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { AuthContext } from "../context/AuthContext";
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const { logout } = useContext(AuthContext);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome</Text>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate("AddTransaction")}
+      >
+        <Text style={styles.buttonText}>Add Transaction</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate("Transactions")}
+      >
+        <Text style={styles.buttonText}>View Transactions</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={logout}>
         <Text style={styles.buttonText}>Logout</Text>

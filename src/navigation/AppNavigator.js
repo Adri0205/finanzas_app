@@ -11,31 +11,32 @@ import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 
 import AddTransactionScreen from "../screens/AddTransactionScreen";
+
 import HomeScreen from "../screens/HomeScreen";
-import TransactionsScreen from "../screens/TransactionsScreen";
+
+import TransactionScreen from "../screens/TransactionScreen";
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const { userToken } = useContext(AuthContext);
-
+  const { userToken, loading } = useContext(AuthContext);
+  if (loading) return null;
   return (
     <NavigationContainer>
       <Stack.Navigator>
         {userToken ? (
-          <Stack.Screen name="Home" component={HomeScreen} />
+          <>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen
+              name="AddTransaction"
+              component={AddTransactionScreen}
+            />
+            <Stack.Screen name="Transactions" component={TransactionScreen} />
+          </>
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
-
             <Stack.Screen name="Register" component={RegisterScreen} />
-
-            <Stack.Screen name="Transaction" component={AddTransactionScreen} />
-
-            <Stack.Screen
-              name="TransactionScreen"
-              component={TransactionsScreen}
-            />
           </>
         )}
       </Stack.Navigator>
