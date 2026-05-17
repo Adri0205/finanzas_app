@@ -1,22 +1,34 @@
 import { useContext } from "react";
 
+
 import { NavigationContainer } from "@react-navigation/native";
+
 
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
+
 import { AuthContext } from "../context/AuthContext";
+
 
 import LoginScreen from "../screens/LoginScreen";
 
+
 import RegisterScreen from "../screens/RegisterScreen";
 
+
 import AddTransactionScreen from "../screens/AddTransactionScreen";
+import EditTransactionScreen from "../screens/EditTransactionScreen";
+import AccountsScreen from "../screens/AccountsScreen";
+
 
 import HomeScreen from "../screens/HomeScreen";
 
+
 import TransactionScreen from "../screens/TransactionScreen";
 
+
 const Stack = createNativeStackNavigator();
+
 
 export default function AppNavigator() {
   const { userToken, loading } = useContext(AuthContext);
@@ -31,6 +43,11 @@ export default function AppNavigator() {
               name="AddTransaction"
               component={AddTransactionScreen}
             />
+            <Stack.Screen
+              name="EditTransaction"
+              component={EditTransactionScreen}
+            />
+            <Stack.Screen name="Accounts" component={AccountsScreen} />
             <Stack.Screen name="Transactions" component={TransactionScreen} />
           </>
         ) : (

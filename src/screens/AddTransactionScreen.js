@@ -1,107 +1,39 @@
-import { useState } from "react";
+import { ScrollView } from "react-native";
 
-import axios from "axios";
 
-import { Button, TextInput, View } from "react-native";
+import API from "../api/api";
 
-export default function AddTransactionScreen() {
-  const [monto, setMonto] = useState("");
 
-  const [tipo, setTipo] = useState("");
+import TransactionForm from "../components/TransactionForm";
 
-  const [categoria, setCategoria] = useState("");
 
-  const [cuenta, setCuenta] = useState("");
-
-  const [descripcion, setDescripcion] = useState("");
-
-  const guardar = async () => {
-    if (!monto || !tipo || !categoria || !cuenta) {
-      alert("Complete todos los campos");
-
-      return;
-    }
-
+export default function AddTransactionScreen({ navigation }) {
+  const guardarTransaccion = async (transaction) => {
     try {
-      await axios.post("http://192.168.1.20:3000/api/transactions", {
-        monto,
-        tipo,
-        categoria,
-        cuenta,
-        descripcion,
-      });
+      await API.post("/transactions", transaction);
 
-      alert("Guardado");
 
-      setMonto("");
-      setTipo("");
-      setCategoria("");
-      setCuenta("");
-      setDescripcion("");
+      navigation.navigate("Transactions");
     } catch (error) {
-      console.log(error);
+      console.log(error.response?.data || error.message);
     }
   };
 
+
   return (
-    <View style={{ padding: 20 }}>
-      <TextInput
-        placeholder="Monto"
-        keyboardType="numeric"
-        value={monto}
-        onChangeText={setMonto}
-        style={{
-          borderWidth: 1,
-          marginBottom: 10,
-          padding: 10,
+    <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <TransactionForm
+        initialValues={{
+          amount: "",
+          type: "ingreso",
+          category: "",
+          account: "",
+          description: "",
+          transaction_date: new Date().toISOString().slice(0, 10),
         }}
+        onSubmit={guardarTransaccion}
+        submitLabel="Guardar transacción"
       />
-
-      <TextInput
-        placeholder="Tipo"
-        value={tipo}
-        onChangeText={setTipo}
-        style={{
-          borderWidth: 1,
-          marginBottom: 10,
-          padding: 10,
-        }}
-      />
-
-      <TextInput
-        placeholder="Categoría"
-        value={categoria}
-        onChangeText={setCategoria}
-        style={{
-          borderWidth: 1,
-          marginBottom: 10,
-          padding: 10,
-        }}
-      />
-
-      <TextInput
-        placeholder="Cuenta"
-        value={cuenta}
-        onChangeText={setCuenta}
-        style={{
-          borderWidth: 1,
-          marginBottom: 10,
-          padding: 10,
-        }}
-      />
-
-      <TextInput
-        placeholder="Descripción"
-        value={descripcion}
-        onChangeText={setDescripcion}
-        style={{
-          borderWidth: 1,
-          marginBottom: 10,
-          padding: 10,
-        }}
-      />
-
-      <Button title="Guardar" onPress={guardar} />
-    </View>
+    </ScrollView>
   );
 }
