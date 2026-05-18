@@ -1,86 +1,102 @@
 import { useEffect, useMemo, useState } from "react";
 
-
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   Alert,
   FlatList,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 
-
 import API from "../api/api";
+import { Button, Card, Container, SelectInput } from "../components";
+import { theme } from "../theme";
 
+const categoryOptions = [
+  { value: "Alimentación", label: "Alimentación" },
+  { value: "Transporte", label: "Transporte" },
+  { value: "Vivienda", label: "Vivienda" },
+  { value: "Servicios básicos", label: "Servicios básicos" },
+  { value: "Salud", label: "Salud" },
+  { value: "Educación", label: "Educación" },
+  { value: "Entretenimiento", label: "Entretenimiento" },
+  { value: "Compras personales", label: "Compras personales" },
+  { value: "Tecnología", label: "Tecnología" },
+  { value: "Mascotas", label: "Mascotas" },
+  { value: "Ahorro e inversión", label: "Ahorro e inversión" },
+  { value: "Deudas y préstamos", label: "Deudas y préstamos" },
+  { value: "Impuestos", label: "Impuestos" },
+  { value: "Regalos y donaciones", label: "Regalos y donaciones" },
+  { value: "Viajes", label: "Viajes" },
+  { value: "Ejercicio y deporte", label: "Ejercicio y deporte" },
+  { value: "Suscripciones", label: "Suscripciones" },
+  { value: "Emergencias", label: "Emergencias" },
+  { value: "Otros", label: "Otros" },
+];
 
 export default function TransactionsScreen({ navigation }) {
   const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [accountFilter, setAccountFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-
-  const obtenerTransacciones = async () => {
-    try {
-      const response = await API.get("/transactions");
-
-
-      setTransactions(response.data);
-    } catch (error) {
-      console.log(error.response?.data || error.message);
-    }
-  };
-
-
   useEffect(() => {
     obtenerTransacciones();
   }, []);
 
+  const obtenerTransacciones = async () => {
+    try {
+      const [transResponse, catResponse, accResponse] = await Promise.all([]);
+      setTransactions(transResponse.data || []);
+      setCategories(
+        (catResponse.data || []).map((cat) => ({
+          value: cat.name || cat,
+          label: cat.name || cat,
+        })),
+      );
+      setAccounts(
+        (accResponse.data || []).map((acc) => ({
+          value: acc.name || acc,
+          label: acc.name || acc,
+        })),
+      );
+    } catch (error) {
+      console.log(
+        error?.response?.data || error?.message || "Error desconocido",
+      );
+    }
+  };
 
   const filteredTransactions = useMemo(
     () =>
       transactions.filter((transaction) => {
-        if (
-          categoryFilter &&
-          !transaction.category_name
-            .toLowerCase()
-            .includes(categoryFilter.toLowerCase())
-        ) {
+        if (categoryFilter && transaction.category_name !== categoryFilter) {
           return false;
         }
 
-
-        if (
-          accountFilter &&
-          !transaction.account_name
-            .toLowerCase()
-            .includes(accountFilter.toLowerCase())
-        ) {
+        if (accountFilter && transaction.account_name !== accountFilter) {
           return false;
         }
-
 
         const date = transaction.transaction_date?.slice(0, 10) || "";
-
 
         if (startDate && date < startDate) {
           return false;
         }
 
-
         if (endDate && date > endDate) {
           return false;
         }
-
 
         return true;
       }),
     [transactions, categoryFilter, accountFilter, startDate, endDate],
   );
-
 
   const limpiarFiltros = () => {
     setCategoryFilter("");
@@ -88,7 +104,6 @@ export default function TransactionsScreen({ navigation }) {
     setStartDate("");
     setEndDate("");
   };
-
 
   const eliminar = (id) => {
     Alert.alert("Eliminar", "¿Desea eliminar esta transacción?", [
@@ -102,217 +117,212 @@ export default function TransactionsScreen({ navigation }) {
         onPress: async () => {
           try {
             await API.delete(`/transactions/${id}`);
-
-
             obtenerTransacciones();
           } catch (error) {
-            console.log(error.response?.data || error.message);
+            Alert.alert(
+              "Error",
+              error.response?.data?.message || error.message,
+            );
           }
         },
       },
     ]);
   };
 
+  const getTypeIcon = (type) => {
+    return type === "ingreso" ? "plus-circle" : "minus-circle";
+  };
+
+  const getTypeColor = (type) => {
+    return type === "ingreso" ? theme.colors.success : theme.colors.error;
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Transacciones</Text>
-
-
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => navigation.navigate("AddTransaction")}
-      >
-        <Text style={styles.primaryButtonText}>Agregar transacción</Text>
-      </TouchableOpacity>
-
-
-      <View style={styles.filterSection}>
-        <Text style={styles.sectionTitle}>Filtros</Text>
-
-
-        <TextInput
-          placeholder="Categoría"
-          value={categoryFilter}
-          onChangeText={setCategoryFilter}
-          style={styles.input}
-        />
-
-
-        <TextInput
-          placeholder="Cuenta"
-          value={accountFilter}
-          onChangeText={setAccountFilter}
-          style={styles.input}
-        />
-
-
-        <View style={styles.dateRow}>
-          <TextInput
-            placeholder="Desde (YYYY-MM-DD)"
-            value={startDate}
-            onChangeText={setStartDate}
-            style={[styles.input, styles.dateInput]}
-          />
-
-
-          <TextInput
-            placeholder="Hasta (YYYY-MM-DD)"
-            value={endDate}
-            onChangeText={setEndDate}
-            style={[styles.input, styles.dateInput]}
-          />
-        </View>
-
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={limpiarFiltros}
-        >
-          <Text style={styles.secondaryButtonText}>Limpiar filtros</Text>
-        </TouchableOpacity>
-      </View>
-
-
+    <Container>
       <FlatList
         data={filteredTransactions}
         keyExtractor={(item) => item.id.toString()}
-        ListEmptyComponent={() => (
-          <Text style={styles.emptyText}>
-            No hay transacciones para mostrar.
-          </Text>
-        )}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("EditTransaction", {
-                transaction: item,
-              })
-            }
-            onLongPress={() => eliminar(item.id)}
-            style={styles.transactionCard}
-          >
-            <View style={styles.transactionHeader}>
-              <Text
-                style={[
-                  styles.amount,
-                  item.type === "ingreso" ? styles.income : styles.expense,
-                ]}
-              >
-                {item.type === "ingreso" ? "+" : "-"}${item.amount}
-              </Text>
-              <Text style={styles.dateText}>
-                {item.transaction_date?.slice(0, 10)}
-              </Text>
+        ListHeaderComponent={() => (
+          <>
+            <Text style={styles.title}>Transacciones</Text>
+
+            <View style={styles.filtersContainer}>
+              <SelectInput
+                label="Categoría"
+                placeholder="Todas las categorías"
+                value={categoryFilter}
+                onValueChange={setCategoryFilter}
+                options={categories}
+              />
+
+              <SelectInput
+                label="Cuenta"
+                placeholder="Todas las cuentas"
+                value={accountFilter}
+                onValueChange={setAccountFilter}
+                options={accounts}
+              />
+
+              <Button
+                title="Limpiar filtros"
+                onPress={limpiarFiltros}
+                variant="ghost"
+                size="sm"
+              />
             </View>
-
-
-            <Text style={styles.textLine}>{item.category_name}</Text>
-            <Text style={styles.textLine}>{item.account_name}</Text>
-            {item.description ? (
-              <Text style={styles.description}>{item.description}</Text>
-            ) : null}
-          </TouchableOpacity>
+          </>
         )}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons
+              name="swap-horizontal"
+              size={64}
+              color={theme.colors.neutral[300]}
+              style={{ marginBottom: theme.spacing[3] }}
+            />
+            <Text style={styles.emptyText}>
+              No hay transacciones para mostrar.
+            </Text>
+          </View>
+        )}
+        renderItem={({ item }) => {
+          const typeColor = getTypeColor(item.type);
+          const typeIcon = getTypeIcon(item.type);
+
+          return (
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("EditTransaction", {
+                  transaction: item,
+                })
+              }
+              activeOpacity={0.7}
+              style={styles.cardWrapper}
+            >
+              <Card variant="elevated" style={styles.transactionCard}>
+                <View style={styles.transactionContent}>
+                  <View
+                    style={[
+                      styles.iconBg,
+                      { backgroundColor: `${typeColor}15` },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name={typeIcon}
+                      size={24}
+                      color={typeColor}
+                    />
+                  </View>
+
+                  <View style={styles.transactionInfo}>
+                    <Text style={styles.category}>{item.category_name}</Text>
+                    <Text style={styles.account}>{item.account_name}</Text>
+                    {item.description && (
+                      <Text style={styles.description}>{item.description}</Text>
+                    )}
+                  </View>
+
+                  <View style={styles.transactionRight}>
+                    <Text
+                      style={[
+                        styles.amount,
+                        {
+                          color: typeColor,
+                        },
+                      ]}
+                    >
+                      {item.type === "ingreso" ? "+" : "-"}$
+                      {Number(item.amount).toFixed(2)}
+                    </Text>
+                    <Text style={styles.dateText}>
+                      {item.transaction_date?.slice(0, 10)}
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+            </TouchableOpacity>
+          );
+        }}
+        scrollEnabled={true}
+        contentContainerStyle={styles.listContent}
       />
-    </View>
+    </Container>
   );
 }
 
-
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-  },
   title: {
-    fontSize: 26,
-    fontWeight: "bold",
-    marginBottom: 20,
+    fontSize: theme.typography.sizes.xl,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing[4],
   },
-  primaryButton: {
-    backgroundColor: "#2f80ed",
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 20,
-    alignItems: "center",
+  filtersContainer: {
+    marginBottom: theme.spacing[4],
   },
-  primaryButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  filterSection: {
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: "#f7f7f7",
-    borderRadius: 10,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-  },
-  dateRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  dateInput: {
-    flex: 1,
-    marginRight: 8,
-  },
-  secondaryButton: {
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    color: "#2f80ed",
-    fontWeight: "600",
+  cardWrapper: {
+    marginBottom: theme.spacing[2],
   },
   transactionCard: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    padding: theme.spacing[3],
   },
-  transactionHeader: {
+  transactionContent: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
+    alignItems: "center",
+    gap: theme.spacing[3],
   },
-  amount: {
-    fontSize: 18,
-    fontWeight: "bold",
+  iconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.md,
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
   },
-  income: {
-    color: "#219653",
+  transactionInfo: {
+    flex: 1,
   },
-  expense: {
-    color: "#eb5757",
+  category: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing[1],
   },
-  dateText: {
-    color: "#666",
-  },
-  textLine: {
-    color: "#333",
+  account: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing[1],
   },
   description: {
-    marginTop: 8,
-    color: "#666",
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.text.tertiary,
+    fontStyle: "italic",
+  },
+  transactionRight: {
+    alignItems: "flex-end",
+    flexShrink: 0,
+  },
+  amount: {
+    fontSize: theme.typography.sizes.base,
+    fontWeight: theme.typography.weights.bold,
+    marginBottom: theme.spacing[1],
+  },
+  dateText: {
+    fontSize: theme.typography.sizes.xs,
+    color: theme.colors.text.secondary,
+  },
+  emptyState: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: theme.spacing[12],
   },
   emptyText: {
-    textAlign: "center",
-    color: "#666",
-    marginTop: 20,
+    fontSize: theme.typography.sizes.base,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+  },
+  listContent: {
+    flexGrow: 1,
+    paddingBottom: theme.spacing[4],
   },
 });

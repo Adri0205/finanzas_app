@@ -55,7 +55,10 @@ const createAccount = (req, res) => {
 
   db.query(query, [user_id, trimmedName], (error, results) => {
     if (error) {
-      return res.status(500).json(error);
+      return res.status(500).json({
+        message: error.message,
+        sqlMessage: error.sqlMessage,
+      });
     }
 
     if (results.length) {
@@ -71,7 +74,10 @@ const createAccount = (req, res) => {
 
     db.query(insertSql, [user_id, trimmedName], (insertError, insertResult) => {
       if (insertError) {
-        return res.status(500).json(insertError);
+        return res.status(500).json({
+          message: error.message,
+          sqlMessage: error.sqlMessage,
+        });
       }
 
       res.json({
@@ -83,7 +89,45 @@ const createAccount = (req, res) => {
   });
 };
 
+const deleteAccount = (req, res) => {
+  const user_id = req.user.id;
+  const { id } = req.params;
+
+  const deleteTransactionsSql = `
+    DELETE FROM transactions
+    WHERE account_id = ? AND user_id = ?
+  `;
+
+  db.query(deleteTransactionsSql, [id, user_id], (transactionError) => {
+    if (transactionError) {
+      return res.status(500).json({
+        message: transactionError.message,
+        sqlMessage: transactionError.sqlMessage,
+      });
+    }
+
+    const deleteAccountSql = `
+      DELETE FROM accounts
+      WHERE id = ? AND user_id = ?
+    `;
+
+    db.query(deleteAccountSql, [id, user_id], (accountError) => {
+      if (accountError) {
+        return res.status(500).json({
+          message: accountError.message,
+          sqlMessage: accountError.sqlMessage,
+        });
+      }
+
+      res.json({
+        message: "Cuenta eliminada correctamente",
+      });
+    });
+  });
+};
+
 module.exports = {
   getAccounts,
   createAccount,
+  deleteAccount,
 };

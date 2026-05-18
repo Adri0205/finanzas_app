@@ -1,72 +1,110 @@
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Button,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import API from "../api/api";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Button, Input, SelectInput } from ".";
+import { theme } from "../theme";
 
 const typeOptions = [
   { value: "ingreso", label: "Ingreso" },
   { value: "gasto", label: "Gasto" },
 ];
 
+const expenseCategories = [
+  { value: "Alimentación", label: "Alimentación" },
+  { value: "Transporte", label: "Transporte" },
+  { value: "Vivienda", label: "Vivienda" },
+  { value: "Servicios básicos", label: "Servicios básicos" },
+  { value: "Salud", label: "Salud" },
+  { value: "Educación", label: "Educación" },
+  { value: "Entretenimiento", label: "Entretenimiento" },
+  { value: "Compras personales", label: "Compras personales" },
+  { value: "Tecnología", label: "Tecnología" },
+  { value: "Mascotas", label: "Mascotas" },
+  { value: "Ahorro e inversión", label: "Ahorro e inversión" },
+  { value: "Deudas y préstamos", label: "Deudas y préstamos" },
+  { value: "Impuestos", label: "Impuestos" },
+  { value: "Regalos y donaciones", label: "Regalos y donaciones" },
+  { value: "Viajes", label: "Viajes" },
+  { value: "Ejercicio y deporte", label: "Ejercicio y deporte" },
+  { value: "Suscripciones", label: "Suscripciones" },
+  { value: "Emergencias", label: "Emergencias" },
+  { value: "Otros", label: "Otros" },
+];
+
+const incomeCategories = [
+  { value: "Salario", label: "Salario" },
+  { value: "Freelance", label: "Freelance" },
+  { value: "Inversiones", label: "Inversiones" },
+  { value: "Negocios", label: "Negocios" },
+  { value: "Regalos", label: "Regalos" },
+  { value: "Bonificaciones", label: "Bonificaciones" },
+  { value: "Otros", label: "Otros" },
+];
+
+const paymentMethodOptions = [
+  { value: "Efectivo", label: "Efectivo" },
+  { value: "Débito", label: "Débito" },
+  { value: "Crédito", label: "Crédito" },
+  { value: "Transferencia", label: "Transferencia" },
+  { value: "Billetera digital", label: "Billetera digital" },
+];
+
 export default function TransactionForm({
-  initialValues,
+  initialValues = {},
   onSubmit,
   submitLabel,
 }) {
   const [amount, setAmount] = useState(String(initialValues.amount || ""));
+
   const [type, setType] = useState(initialValues.type || "ingreso");
+
   const [category, setCategory] = useState(initialValues.category || "");
-  const [account, setAccount] = useState(initialValues.account || "");
+
+  const [paymentMethod, setPaymentMethod] = useState(
+    initialValues.payment_method || "",
+  );
+
   const [description, setDescription] = useState(
     initialValues.description || "",
   );
+
   const [transactionDate, setTransactionDate] = useState(
     initialValues.transaction_date || new Date().toISOString().slice(0, 10),
   );
-  const [accounts, setAccounts] = useState([]);
+
+  const [customCategory, setCustomCategory] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const categoryOptions =
+    type === "gasto" ? expenseCategories : incomeCategories;
 
   useEffect(() => {
     setAmount(String(initialValues.amount || ""));
     setType(initialValues.type || "ingreso");
     setCategory(initialValues.category || "");
-    setAccount(initialValues.account || "");
+    setPaymentMethod(initialValues.payment_method || "");
     setDescription(initialValues.description || "");
+
     setTransactionDate(
       initialValues.transaction_date || new Date().toISOString().slice(0, 10),
     );
+
+    setCustomCategory("");
   }, [initialValues]);
 
-  useEffect(() => {
-    const loadAccounts = async () => {
-      try {
-        const response = await API.get("/accounts");
-        setAccounts(response.data);
-      } catch (error) {
-        console.log(error.response?.data || error.message);
-      }
-    };
+  const handleCategoryChange = (value) => {
+    setCategory(value);
 
-    loadAccounts();
-  }, []);
+    if (value !== "Otros") {
+      setCustomCategory("");
+    }
+  };
+
+  const finalCategory = category === "Otros" ? customCategory : category;
 
   const handleSubmit = () => {
-    if (
-      !amount ||
-      !type ||
-      !category.trim() ||
-      !account.trim() ||
-      !transactionDate.trim()
-    ) {
+    if (!amount || !type || !finalCategory || !transactionDate) {
       Alert.alert("Error", "Complete todos los campos obligatorios.");
+
       return;
     }
 
@@ -74,14 +112,21 @@ export default function TransactionForm({
 
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       Alert.alert("Error", "Ingrese un monto válido mayor que cero.");
+
+      return;
+    }
+
+    if (category === "Otros" && !customCategory.trim()) {
+      Alert.alert("Error", "Ingrese una categoría personalizada.");
+
       return;
     }
 
     onSubmit({
       amount: parsedAmount,
       type,
-      category_name: category.trim(),
-      account_name: account.trim(),
+      category_name: finalCategory.trim(),
+      payment_method: paymentMethod,
       description: description.trim(),
       transaction_date: transactionDate.trim(),
     });
@@ -89,21 +134,22 @@ export default function TransactionForm({
 
   return (
     <View style={styles.form}>
-      <Text style={styles.label}>Monto</Text>
-      <TextInput
-        placeholder="Ej. 1200"
-        keyboardType="numeric"
+      <Input
+        placeholder="Monto (Ej. 1200)"
+        keyboardType="decimal-pad"
         value={amount}
         onChangeText={setAmount}
-        style={styles.input}
+        maxLength={12}
       />
 
-      <Text style={styles.label}>Tipo</Text>
       <View style={styles.typeRow}>
         {typeOptions.map((option) => (
           <Pressable
             key={option.value}
-            onPress={() => setType(option.value)}
+            onPress={() => {
+              setType(option.value);
+              setCategory("");
+            }}
             style={[
               styles.typeButton,
               type === option.value && styles.typeButtonActive,
@@ -121,58 +167,69 @@ export default function TransactionForm({
         ))}
       </View>
 
-      <Text style={styles.label}>Categoría</Text>
-      <TextInput
-        placeholder="Ej. Comida"
+      <SelectInput
+        label={type === "gasto" ? "Categoría de gasto" : "Categoría de ingreso"}
+        placeholder="Seleccionar categoría"
         value={category}
-        onChangeText={setCategory}
-        style={styles.input}
+        onValueChange={handleCategoryChange}
+        options={categoryOptions}
+        searchable
       />
 
-      <Text style={styles.label}>Cuenta</Text>
-      <TextInput
-        placeholder="Ej. Tarjeta"
-        value={account}
-        onChangeText={setAccount}
-        style={styles.input}
+      {category === "Otros" && (
+        <Input
+          placeholder="Ingrese categoría personalizada"
+          value={customCategory}
+          onChangeText={setCustomCategory}
+        />
+      )}
+
+      <SelectInput
+        label="Método de pago"
+        placeholder="Seleccionar método de pago"
+        value={paymentMethod}
+        onValueChange={setPaymentMethod}
+        options={paymentMethodOptions}
       />
-      {accounts.length > 0 ? (
-        <View style={styles.suggestionsWrapper}>
-          <Text style={styles.suggestionsTitle}>Cuentas existentes</Text>
-          <FlatList
-            data={accounts}
-            horizontal
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.suggestionButton}
-                onPress={() => setAccount(item.name)}
-              >
-                <Text style={styles.suggestionText}>{item.name}</Text>
-              </TouchableOpacity>
-            )}
+
+      <View style={styles.dateContainer}>
+        <Text style={styles.dateLabel}>Fecha</Text>
+
+        <Pressable
+          style={styles.dateButton}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Text style={styles.dateText}>{transactionDate}</Text>
+        </Pressable>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={new Date(transactionDate)}
+            mode="date"
+            display="default"
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(false);
+
+              if (selectedDate) {
+                const formattedDate = selectedDate.toISOString().slice(0, 10);
+
+                setTransactionDate(formattedDate);
+              }
+            }}
           />
-        </View>
-      ) : null}
+        )}
+      </View>
 
-      <Text style={styles.label}>Fecha</Text>
-      <TextInput
-        placeholder="YYYY-MM-DD"
-        value={transactionDate}
-        onChangeText={setTransactionDate}
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Descripción</Text>
-      <TextInput
-        placeholder="Opcional"
+      <Input
+        placeholder="Descripción (Opcional)"
         value={description}
         onChangeText={setDescription}
-        style={[styles.input, styles.textArea]}
         multiline
+        numberOfLines={4}
+        inputStyle={styles.textArea}
       />
 
-      <Button title={submitLabel} onPress={handleSubmit} />
+      <Button title={submitLabel} onPress={handleSubmit} size="lg" />
     </View>
   );
 }
@@ -180,65 +237,71 @@ export default function TransactionForm({
 const styles = StyleSheet.create({
   form: {
     width: "100%",
+    paddingBottom: theme.spacing[4],
   },
-  label: {
-    marginBottom: 6,
-    fontWeight: "600",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 14,
-    backgroundColor: "#fff",
-  },
+
   textArea: {
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: "top",
   },
+
   typeRow: {
     flexDirection: "row",
-    marginBottom: 14,
+    marginBottom: theme.spacing[4],
+    gap: theme.spacing[2],
   },
+
   typeButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    paddingVertical: 12,
-    marginRight: 10,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing[3],
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: theme.colors.surface,
+    minHeight: 44,
   },
+
   typeButtonActive: {
-    backgroundColor: "#2f80ed",
-    borderColor: "#2f80ed",
+    backgroundColor: theme.colors.primary[50],
+    borderColor: theme.colors.primary[200],
   },
+
   typeButtonText: {
-    color: "#333",
+    fontSize: theme.typography.sizes.base,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.text.secondary,
   },
+
   typeButtonTextActive: {
-    color: "#fff",
-    fontWeight: "700",
+    color: theme.colors.primary[700],
+    fontWeight: theme.typography.weights.semibold,
   },
-  suggestionsWrapper: {
-    marginBottom: 16,
+
+  dateContainer: {
+    marginBottom: theme.spacing[3],
   },
-  suggestionsTitle: {
-    marginBottom: 8,
-    fontWeight: "600",
+
+  dateLabel: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.medium,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing[2],
   },
-  suggestionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+
+  dateButton: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    marginRight: 10,
-    backgroundColor: "#f1f1f1",
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing[3],
+    backgroundColor: theme.colors.surface,
+    minHeight: 50,
+    justifyContent: "center",
   },
-  suggestionText: {
-    color: "#333",
+
+  dateText: {
+    fontSize: theme.typography.sizes.base,
+    color: theme.colors.text.primary,
   },
 });

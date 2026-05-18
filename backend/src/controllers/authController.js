@@ -46,7 +46,9 @@ const register = async (req, res) => {
       });
     });
   } catch (error) {
-    alert(error.response?.data?.message || "Register error");
+    alert(
+      error?.response?.data?.message || error?.message || "Error desconocido",
+    );
   }
 };
 
@@ -100,7 +102,9 @@ const login = async (req, res) => {
       });
     });
   } catch (error) {
-    alert(error.response?.data?.message || "Login error");
+    alert(
+      error?.response?.data?.message || error?.message || "Error desconocido",
+    );
   }
 };
 
