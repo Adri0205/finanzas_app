@@ -16,24 +16,65 @@ import { theme } from "../theme";
 export default function DashboardScreen() {
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const { month, startDate, endDate } = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthNum = String(now.getMonth() + 1).padStart(2, "0");
+    const m = `${year}-${monthNum}`;
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    return {
+      month: m,
+      startDate: `${m}-01`,
+      endDate: `${m}-${String(lastDay).padStart(2, "0")}`,
+    };
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
-      const [transactionsResponse, accountsResponse] = await Promise.all([
-        API.get("/transactions"),
-        API.get("/accounts"),
-      ]);
-      setTransactions(transactionsResponse.data || []);
-      setAccounts(accountsResponse.data || []);
+      const [transactionsResult, accountsResult, budgetsResult] =
+        await Promise.allSettled([
+          API.get(`/transactions?start_date=${startDate}&end_date=${endDate}`),
+          API.get("/accounts"),
+          API.get(`/budgets?month=${month}`),
+        ]);
+
+      if (transactionsResult.status === "fulfilled") {
+        setTransactions(transactionsResult.value.data || []);
+      } else {
+        console.error(
+          "Error al cargar transacciones:",
+          transactionsResult.reason,
+        );
+      }
+
+      if (accountsResult.status === "fulfilled") {
+        setAccounts(accountsResult.value.data || []);
+      } else {
+        console.error("Error al cargar cuentas:", accountsResult.reason);
+      }
+
+      if (budgetsResult.status === "fulfilled") {
+        setBudgets(
+          (budgetsResult.value.data?.budgets || []).map((b) => ({
+            ...b,
+            budget_limit: Number(b.budget_limit),
+            spent: Number(b.spent),
+          })),
+        );
+      } else {
+        console.error("Error al cargar presupuestos:", budgetsResult.reason);
+      }
     } catch (error) {
-      console.error("Error loading dashboard data:", error);
+      console.error("Error inesperado al cargar dashboard:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [startDate, endDate, month]);
 
   useFocusEffect(
     useCallback(() => {
@@ -46,20 +87,8 @@ export default function DashboardScreen() {
     loadData();
   }, [loadData]);
 
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  const monthTransactions = useMemo(
-    () =>
-      transactions.filter((transaction) => {
-        const date = new Date(transaction.transaction_date || "");
-        return (
-          date.getFullYear() === currentYear && date.getMonth() === currentMonth
-        );
-      }),
-    [transactions, currentMonth, currentYear],
-  );
+  // transactions ya vienen filtrados por mes desde el backend
+  const monthTransactions = transactions;
 
   const { incomeTotal, expenseTotal, netTotal } = useMemo(() => {
     let incomes = 0;
@@ -77,6 +106,54 @@ export default function DashboardScreen() {
       netTotal: incomes - expenses,
     };
   }, [monthTransactions]);
+
+  const globalBudget = useMemo(() => {
+    let totalLimit = 0;
+    let totalSpent = 0;
+
+    budgets.forEach((b) => {
+      totalLimit += b.budget_limit;
+      totalSpent += b.spent;
+    });
+
+    const percent =
+      totalLimit > 0 ? Math.min((totalSpent / totalLimit) * 100, 100) : 0;
+
+    let statusColor = theme.colors.success;
+    let statusLabel = "Bajo control";
+    let statusIcon = "check-circle";
+    let backgroundColor = "#D1FAE5";
+    let message = "";
+
+    if (totalLimit > 0) {
+      if (totalSpent >= totalLimit) {
+        statusColor = theme.colors.error;
+        statusLabel = "¡Límite excedido!";
+        statusIcon = "alert-circle";
+        backgroundColor = "#FEE2E2";
+        message = `Superado en $${(totalSpent - totalLimit).toFixed(2)}`;
+      } else if (totalSpent >= totalLimit * 0.8) {
+        statusColor = theme.colors.warning;
+        statusLabel = "Próximo al límite";
+        statusIcon = "exclamation";
+        backgroundColor = "#FEF3C7";
+        message = `${Math.round(percent)}% del presupuesto usado`;
+      } else {
+        message = `${Math.round(percent)}% del presupuesto usado`;
+      }
+    }
+
+    return {
+      totalLimit,
+      totalSpent,
+      percent,
+      statusColor,
+      statusLabel,
+      statusIcon,
+      backgroundColor,
+      message,
+    };
+  }, [budgets]);
 
   const expenseCategories = useMemo(() => {
     const map = {};
@@ -184,6 +261,70 @@ export default function DashboardScreen() {
             ${netTotal.toFixed(2)}
           </Text>
         </Card>
+
+        {globalBudget.totalLimit > 0 && (
+          <Card
+            variant="elevated"
+            style={[
+              styles.budgetCard,
+              { backgroundColor: globalBudget.backgroundColor },
+            ]}
+          >
+            <View style={styles.budgetHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.budgetTitle}>Presupuesto del mes</Text>
+                <Text
+                  style={[
+                    styles.budgetAmount,
+                    { color: globalBudget.statusColor },
+                  ]}
+                >
+                  ${globalBudget.totalSpent.toFixed(2)} de $
+                  {globalBudget.totalLimit.toFixed(2)}
+                </Text>
+              </View>
+              <MaterialCommunityIcons
+                name={globalBudget.statusIcon}
+                size={28}
+                color={globalBudget.statusColor}
+              />
+            </View>
+            <View style={styles.budgetProgressBar}>
+              <View
+                style={[
+                  styles.budgetProgressFill,
+                  {
+                    width: `${globalBudget.percent}%`,
+                    backgroundColor: globalBudget.statusColor,
+                  },
+                ]}
+              />
+            </View>
+            <View style={styles.budgetFooter}>
+              <Text
+                style={[
+                  styles.budgetStatus,
+                  { color: globalBudget.statusColor },
+                ]}
+              >
+                {globalBudget.statusLabel}
+              </Text>
+              <Text style={styles.budgetPercent}>
+                {Math.round(globalBudget.percent)}%
+              </Text>
+            </View>
+            {globalBudget.message ? (
+              <Text
+                style={[
+                  styles.budgetMessage,
+                  { color: globalBudget.statusColor },
+                ]}
+              >
+                {globalBudget.message}
+              </Text>
+            ) : null}
+          </Card>
+        )}
 
         {expenseCategories.length > 0 && (
           <Section title="Top gastos por categoría">
@@ -417,5 +558,53 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.lg,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.primary[500],
+  },
+  budgetCard: {
+    padding: theme.spacing[4],
+    marginBottom: theme.spacing[4],
+  },
+  budgetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: theme.spacing[3],
+  },
+  budgetTitle: {
+    fontSize: theme.typography.sizes.sm,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing[1],
+  },
+  budgetAmount: {
+    fontSize: theme.typography.sizes.lg,
+    fontWeight: theme.typography.weights.bold,
+  },
+  budgetProgressBar: {
+    height: 8,
+    backgroundColor: theme.colors.neutral[200],
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: theme.spacing[2],
+  },
+  budgetProgressFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  budgetFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  budgetStatus: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.semibold,
+  },
+  budgetPercent: {
+    fontSize: theme.typography.sizes.sm,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.primary,
+  },
+  budgetMessage: {
+    fontSize: theme.typography.sizes.xs,
+    marginTop: theme.spacing[2],
   },
 });

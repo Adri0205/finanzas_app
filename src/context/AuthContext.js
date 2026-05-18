@@ -8,7 +8,7 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [userToken, setUserToken] = useState(null);
-
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // LOGIN
@@ -20,44 +20,49 @@ export const AuthProvider = ({ children }) => {
       });
 
       const token = response.data.token;
+      const userData = response.data.user;
 
       setUserToken(token);
+      setUser(userData);
 
       await AsyncStorage.setItem("token", token);
+      await AsyncStorage.setItem("user", JSON.stringify(userData));
     } catch (error) {
       console.log(error.response?.data);
+      throw error;
     }
   };
 
   // REGISTER
   const register = async (name, email, password) => {
-    try {
-      await API.post("/auth/register", {
-        name,
-        email,
-        password,
-      });
-
-      login(email, password);
-    } catch (error) {
-      console.log(error.response?.data);
-    }
+    const response = await API.post("/auth/register", {
+      name,
+      email,
+      password,
+    });
+    return response.data;
   };
 
   // LOGOUT
   const logout = async () => {
     setUserToken(null);
+    setUser(null);
 
     await AsyncStorage.removeItem("token");
+    await AsyncStorage.removeItem("user");
   };
 
   // PERSISTENCIA
   const isLoggedIn = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
+      const storedUser = await AsyncStorage.getItem("user");
 
       if (token) {
         setUserToken(token);
+      }
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.log(error);
@@ -77,6 +82,7 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         userToken,
+        user,
         loading,
       }}
     >

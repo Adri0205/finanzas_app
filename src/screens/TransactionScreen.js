@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Alert,
   FlatList,
@@ -49,7 +50,7 @@ export default function TransactionsScreen({ navigation }) {
     obtenerTransacciones();
   }, []);
 
-  const obtenerTransacciones = async () => {
+  const obtenerTransacciones = useCallback(async () => {
     try {
       const [transResponse, accResponse] = await Promise.all([
         API.get("/transactions"),
@@ -68,7 +69,13 @@ export default function TransactionsScreen({ navigation }) {
         error?.response?.data || error?.message || "Error desconocido",
       );
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      obtenerTransacciones();
+    }, [obtenerTransacciones]),
+  );
 
   const filteredTransactions = useMemo(
     () =>
@@ -188,15 +195,7 @@ export default function TransactionsScreen({ navigation }) {
           const typeIcon = getTypeIcon(item.type);
 
           return (
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("EditTransaction", {
-                  transaction: item,
-                })
-              }
-              activeOpacity={0.7}
-              style={styles.cardWrapper}
-            >
+            <View style={styles.cardWrapper}>
               <Card variant="elevated" style={styles.transactionCard}>
                 <View style={styles.transactionContent}>
                   <View
@@ -235,10 +234,21 @@ export default function TransactionsScreen({ navigation }) {
                     <Text style={styles.dateText}>
                       {item.transaction_date?.slice(0, 10)}
                     </Text>
+                    <TouchableOpacity
+                      onPress={() => eliminar(item.id)}
+                      style={styles.deleteBtn}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <MaterialCommunityIcons
+                        name="trash-can-outline"
+                        size={20}
+                        color={theme.colors.error}
+                      />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </Card>
-            </TouchableOpacity>
+            </View>
           );
         }}
         scrollEnabled={true}
@@ -260,6 +270,9 @@ const styles = StyleSheet.create({
   },
   cardWrapper: {
     marginBottom: theme.spacing[2],
+  },
+  deleteBtn: {
+    marginTop: theme.spacing[1],
   },
   transactionCard: {
     padding: theme.spacing[3],

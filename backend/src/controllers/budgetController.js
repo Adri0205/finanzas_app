@@ -33,9 +33,12 @@ const getOrCreateEntityId = (type, user_id, name) =>
 
 const getBudgets = (req, res) => {
   const user_id = req.user.id;
-  const month = req.query.month || new Date().toISOString().slice(0, 7);
-  const startDate = `${month}-01`;
-  const endDate = `${month}-31`;
+  const month =
+    req.query.month ||
+    (() => {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    })();
 
   const sql = `
     SELECT
@@ -57,18 +60,21 @@ const getBudgets = (req, res) => {
       ON t.category_id = c.id
       AND t.user_id = c.user_id
       AND t.type = 'gasto'
-      AND t.transaction_date >= ?
-      AND t.transaction_date <= ?
+      AND LEFT(t.transaction_date, 7) = ?
     WHERE c.user_id = ?
     GROUP BY c.id, c.name, b.budget_limit
     ORDER BY c.name ASC
   `;
 
-  db.query(sql, [month, startDate, endDate, user_id], (error, results) => {
+  db.query(sql, [month, month, user_id], (error, results) => {
     if (error) {
+      console.error("getBudgets error:", error);
       return res.status(500).json(error);
     }
-
+    console.log(
+      `getBudgets month=${month} user=${user_id} results:`,
+      results.length,
+    );
     res.json({ month, budgets: results });
   });
 };

@@ -7,7 +7,7 @@ const getAccounts = (req, res) => {
         SELECT
             a.id,
             a.name,
-            COALESCE(
+            COALESCE(a.initial_balance, 0) + COALESCE(
                 SUM(
                     CASE
                         WHEN t.type = 'ingreso' THEN t.amount
@@ -126,8 +126,29 @@ const deleteAccount = (req, res) => {
   });
 };
 
+const updateAccountBalance = (req, res) => {
+  const user_id = req.user.id;
+  const { id } = req.params;
+  const { initial_balance } = req.body;
+
+  const parsed = Number(initial_balance);
+  if (Number.isNaN(parsed)) {
+    return res.status(400).json({ message: "Monto inválido" });
+  }
+
+  const sql = `UPDATE accounts SET initial_balance = ? WHERE id = ? AND user_id = ?`;
+
+  db.query(sql, [parsed, id, user_id], (error) => {
+    if (error) {
+      return res.status(500).json(error);
+    }
+    res.json({ message: "Saldo actualizado" });
+  });
+};
+
 module.exports = {
   getAccounts,
   createAccount,
   deleteAccount,
+  updateAccountBalance,
 };

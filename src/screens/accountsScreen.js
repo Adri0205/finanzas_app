@@ -1,6 +1,13 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import API from "../api/api";
 import { Button, Card, Container, Input, Section } from "../components";
 import { theme } from "../theme";
@@ -9,6 +16,8 @@ export default function AccountsScreen() {
   const [accounts, setAccounts] = useState([]);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState("");
 
   const loadAccounts = async () => {
     try {
@@ -72,39 +81,58 @@ export default function AccountsScreen() {
     ]);
   };
 
-  const HeaderComponent = () => (
-    <>
-      <Text style={styles.title}>Mis Cuentas</Text>
+  const startEdit = (item) => {
+    setEditingId(item.id);
+    setEditValue(String(Number(item.balance).toFixed(2)));
+  };
 
-      <Section title="Nueva cuenta">
-        <Input
-          label="Nombre de la cuenta"
-          placeholder="Ej. Efectivo, Ahorros"
-          value={name}
-          onChangeText={setName}
-        />
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
 
-        <Button
-          title="Crear cuenta"
-          onPress={addAccount}
-          loading={loading}
-          size="lg"
-        />
-      </Section>
-
-      {accounts.length > 0 && (
-        <Text style={styles.sectionTitle}>Mis cuentas</Text>
-      )}
-    </>
-  );
+  const saveBalance = async (id) => {
+    const parsed = parseFloat(editValue.replace(",", "."));
+    if (Number.isNaN(parsed)) {
+      Alert.alert("Error", "Ingrese un monto válido.");
+      return;
+    }
+    try {
+      await API.patch(`/accounts/${id}/balance`, { initial_balance: parsed });
+      setEditingId(null);
+      setEditValue("");
+      await loadAccounts();
+    } catch (error) {
+      Alert.alert("Error", error.response?.data?.message || error.message);
+    }
+  };
 
   return (
     <Container>
-      <FlatList
-        data={accounts}
-        keyExtractor={(item) => item.id.toString()}
-        ListHeaderComponent={<HeaderComponent />}
-        ListEmptyComponent={() => (
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+      >
+        <Text style={styles.title}>Mis Cuentas</Text>
+
+        <Section title="Nueva cuenta">
+          <Input
+            label="Nombre de la cuenta"
+            placeholder="Ej. Efectivo, Ahorros"
+            value={name}
+            onChangeText={setName}
+          />
+
+          <Button
+            title="Crear cuenta"
+            onPress={addAccount}
+            loading={loading}
+            size="lg"
+          />
+        </Section>
+
+        {accounts.length === 0 ? (
           <View style={styles.emptyState}>
             <MaterialCommunityIcons
               name="bank"
@@ -119,75 +147,128 @@ export default function AccountsScreen() {
               Crea tu primera cuenta para empezar
             </Text>
           </View>
-        )}
-        renderItem={({ item }) => {
-          const balance = Number(item.balance ?? 0);
-          const isPositive = balance >= 0;
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Mis cuentas</Text>
 
-          return (
-            <Card
-              variant="elevated"
-              style={styles.accountCard}
-              onPress={() => {
-                Alert.alert("Opciones de cuenta", `${item.name}`, [
-                  {
-                    text: "Eliminar",
-                    style: "destructive",
-                    onPress: () => deleteAccount(item.id),
-                  },
-                  {
-                    text: "Cancelar",
-                    style: "cancel",
-                  },
-                ]);
-              }}
-            >
-              <View style={styles.accountContent}>
-                <View style={styles.accountLeft}>
-                  <View
-                    style={[
-                      styles.accountIcon,
-                      {
-                        backgroundColor: isPositive
-                          ? theme.colors.success + "15"
-                          : theme.colors.error + "15",
-                      },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name="bank"
-                      size={24}
-                      color={
-                        isPositive ? theme.colors.success : theme.colors.error
-                      }
-                    />
+            {accounts.map((item) => {
+              const balance = Number(item.balance ?? 0);
+              const isPositive = balance >= 0;
+              const isEditing = editingId === item.id;
+
+              return (
+                <Card
+                  key={item.id.toString()}
+                  variant="elevated"
+                  style={styles.accountCard}
+                >
+                  <View style={styles.accountContent}>
+                    <View style={styles.accountLeft}>
+                      <View
+                        style={[
+                          styles.accountIcon,
+                          {
+                            backgroundColor: isPositive
+                              ? theme.colors.success + "15"
+                              : theme.colors.error + "15",
+                          },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="bank"
+                          size={24}
+                          color={
+                            isPositive
+                              ? theme.colors.success
+                              : theme.colors.error
+                          }
+                        />
+                      </View>
+                      <View>
+                        <Text style={styles.accountName}>{item.name}</Text>
+                        <Text style={styles.accountStatus}>
+                          {isPositive ? "Saldo positivo" : "Saldo negativo"}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.accountRight}>
+                      <Text
+                        style={[
+                          styles.accountBalance,
+                          isPositive
+                            ? styles.balancePositive
+                            : styles.balanceNegative,
+                        ]}
+                      >
+                        ${balance.toFixed(2)}
+                      </Text>
+                      <View style={styles.accountActions}>
+                        <TouchableOpacity
+                          onPress={() => startEdit(item)}
+                          style={styles.actionBtn}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <MaterialCommunityIcons
+                            name="pencil-outline"
+                            size={18}
+                            color={theme.colors.primary[500]}
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => deleteAccount(item.id)}
+                          style={styles.actionBtn}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <MaterialCommunityIcons
+                            name="trash-can-outline"
+                            size={18}
+                            color={theme.colors.error}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.accountName}>{item.name}</Text>
-                    <Text style={styles.accountStatus}>
-                      {isPositive ? "Saldo positivo" : "Saldo negativo"}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.accountRight}>
-                  <Text
-                    style={[
-                      styles.accountBalance,
-                      isPositive
-                        ? styles.balancePositive
-                        : styles.balanceNegative,
-                    ]}
-                  >
-                    ${balance.toFixed(2)}
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          );
-        }}
-        scrollEnabled={false}
-        contentContainerStyle={styles.listContent}
-      />
+
+                  {isEditing && (
+                    <View style={styles.editRow}>
+                      <View style={{ flex: 1 }}>
+                        <Input
+                          label="Nuevo saldo"
+                          placeholder="Ej. 500.00"
+                          value={editValue}
+                          onChangeText={setEditValue}
+                          keyboardType="decimal-pad"
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={styles.saveBtn}
+                        onPress={() => saveBalance(item.id)}
+                      >
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={20}
+                          color={theme.colors.text.inverse}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.cancelBtn}
+                        onPress={cancelEdit}
+                      >
+                        <MaterialCommunityIcons
+                          name="close"
+                          size={20}
+                          color={theme.colors.text.inverse}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </Card>
+              );
+            })}
+          </>
+        )}
+      </ScrollView>
     </Container>
   );
 }
@@ -240,6 +321,38 @@ const styles = StyleSheet.create({
   },
   accountRight: {
     alignItems: "flex-end",
+  },
+  accountActions: {
+    flexDirection: "row",
+    gap: theme.spacing[2],
+    marginTop: theme.spacing[1],
+  },
+  actionBtn: {
+    padding: theme.spacing[1],
+  },
+  editRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: theme.spacing[2],
+    marginTop: theme.spacing[3],
+  },
+  saveBtn: {
+    backgroundColor: theme.colors.success,
+    borderRadius: theme.borderRadius.md,
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: theme.spacing[1],
+  },
+  cancelBtn: {
+    backgroundColor: theme.colors.neutral[400],
+    borderRadius: theme.borderRadius.md,
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: theme.spacing[1],
   },
   accountBalance: {
     fontSize: theme.typography.sizes.lg,

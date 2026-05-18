@@ -1,4 +1,4 @@
-import { ScrollView } from "react-native";
+import { Alert, ScrollView } from "react-native";
 import API from "../api/api";
 import { Container } from "../components";
 import TransactionForm from "../components/TransactionForm";
@@ -11,6 +11,12 @@ export default function AddTransactionScreen({ navigation }) {
       navigation.navigate("Transactions");
     } catch (error) {
       console.log("error en api", error);
+      Alert.alert(
+        "Error",
+        error?.response?.data?.message ||
+          error?.message ||
+          "No se pudo guardar la transacción",
+      );
     }
   };
 

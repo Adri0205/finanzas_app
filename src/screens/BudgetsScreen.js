@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -14,14 +15,19 @@ import API from "../api/api";
 import { Badge, Card, Container, Input } from "../components";
 import { theme } from "../theme";
 
-const getCurrentMonth = () => new Date().toISOString().slice(0, 7);
+const getCurrentMonth = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+};
 
 export default function BudgetsScreen() {
   const [month, setMonth] = useState(getCurrentMonth());
   const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const loadBudgets = async () => {
+  const loadBudgets = useCallback(async () => {
     setLoading(true);
     try {
       const response = await API.get(`/budgets?month=${month}`);
@@ -41,11 +47,13 @@ export default function BudgetsScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadBudgets();
   }, [month]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadBudgets();
+    }, [loadBudgets]),
+  );
 
   // Calcular presupuesto global
   const globalBudget = useMemo(() => {
@@ -232,7 +240,9 @@ export default function BudgetsScreen() {
                 onPress={() => {
                   const [y, m] = month.split("-");
                   const date = new Date(parseInt(y), parseInt(m) - 2);
-                  setMonth(date.toISOString().slice(0, 7));
+                  const newYear = date.getFullYear();
+                  const newMonth = String(date.getMonth() + 1).padStart(2, "0");
+                  setMonth(`${newYear}-${newMonth}`);
                 }}
                 style={styles.monthButton}
               >
@@ -244,17 +254,22 @@ export default function BudgetsScreen() {
               </Pressable>
 
               <Text style={styles.monthText}>
-                {new Date(month + "-01").toLocaleString("es-ES", {
-                  month: "long",
-                  year: "numeric",
-                })}
+                {(() => {
+                  const [y, m] = month.split("-").map(Number);
+                  return new Date(y, m - 1, 1).toLocaleString("es-ES", {
+                    month: "long",
+                    year: "numeric",
+                  });
+                })()}
               </Text>
 
               <Pressable
                 onPress={() => {
                   const [y, m] = month.split("-");
                   const date = new Date(parseInt(y), parseInt(m));
-                  setMonth(date.toISOString().slice(0, 7));
+                  const newYear = date.getFullYear();
+                  const newMonth = String(date.getMonth() + 1).padStart(2, "0");
+                  setMonth(`${newYear}-${newMonth}`);
                 }}
                 style={styles.monthButton}
               >

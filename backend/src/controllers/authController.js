@@ -8,8 +8,25 @@ const register = async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Todos los campos son requeridos" });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({ message: "Correo electrónico no válido" });
+    }
+
+    if (
+      password.length < 8 ||
+      !/[A-Z]/.test(password) ||
+      !/[a-z]/.test(password) ||
+      !/[0-9]/.test(password) ||
+      !/[^A-Za-z0-9]/.test(password)
+    ) {
       return res.status(400).json({
-        message: "All fields are required",
+        message:
+          "La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial",
       });
     }
 
@@ -23,7 +40,7 @@ const register = async (req, res) => {
 
       if (result.length > 0) {
         return res.status(400).json({
-          message: "Email already exists",
+          message: "Este correo ya está registrado",
         });
       }
 
@@ -40,15 +57,32 @@ const register = async (req, res) => {
           return res.status(500).json(err);
         }
 
-        res.status(201).json({
-          message: "User created successfully",
-        });
+        const newUserId = result.insertId;
+        const defaultAccounts = [
+          "Efectivo",
+          "Débito",
+          "Crédito",
+          "Transferencia",
+          "Billetera digital",
+        ];
+        const accountValues = defaultAccounts.map((acc) => [newUserId, acc]);
+
+        db.query(
+          "INSERT INTO accounts (user_id, name) VALUES ?",
+          [accountValues],
+          (accErr) => {
+            if (accErr) {
+              console.error("Error creando cuentas por defecto:", accErr);
+            }
+            res.status(201).json({ message: "Cuenta creada exitosamente" });
+          },
+        );
       });
     });
   } catch (error) {
-    alert(
-      error?.response?.data?.message || error?.message || "Error desconocido",
-    );
+    res
+      .status(500)
+      .json({ message: error?.message || "Error interno del servidor" });
   }
 };
 
@@ -102,9 +136,9 @@ const login = async (req, res) => {
       });
     });
   } catch (error) {
-    alert(
-      error?.response?.data?.message || error?.message || "Error desconocido",
-    );
+    res
+      .status(500)
+      .json({ message: error?.message || "Error interno del servidor" });
   }
 };
 

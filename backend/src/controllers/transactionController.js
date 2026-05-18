@@ -92,6 +92,7 @@ const getTransactions = (req, res) => {
   const sql = `
     SELECT
       t.*,
+      a.name AS account_name,
       c.name AS category_name
     FROM transactions t
     INNER JOIN accounts a ON t.account_id = a.id
@@ -123,8 +124,15 @@ const createTransaction = async (req, res) => {
     transaction_date,
   } = req.body;
   console.log("body:", req.body);
-  if (!amount || !type || !(category_id || category_name)) {
-    return res.status(400).json({ message: "Faltan campos obligatorios" });
+  const normalizedType = typeof type === "string" ? type.trim() : "";
+  if (
+    !amount ||
+    !["ingreso", "gasto"].includes(normalizedType) ||
+    !(category_id || category_name)
+  ) {
+    return res
+      .status(400)
+      .json({ message: "Faltan campos obligatorios o tipo inválido" });
   }
 
   try {
@@ -157,7 +165,7 @@ const createTransaction = async (req, res) => {
         resolved.account_id,
         resolved.category_id,
         amount,
-        type,
+        normalizedType,
         description,
         transaction_date || new Date().toISOString().slice(0, 10),
       ],
@@ -190,8 +198,15 @@ const updateTransaction = async (req, res) => {
     transaction_date,
   } = req.body;
 
-  if (!amount || !type || !(category_id || category_name)) {
-    return res.status(400).json({ message: "Faltan campos obligatorios" });
+  const normalizedType = typeof type === "string" ? type.trim() : "";
+  if (
+    !amount ||
+    !["ingreso", "gasto"].includes(normalizedType) ||
+    !(category_id || category_name)
+  ) {
+    return res
+      .status(400)
+      .json({ message: "Faltan campos obligatorios o tipo inválido" });
   }
 
   try {
@@ -221,7 +236,7 @@ const updateTransaction = async (req, res) => {
         resolved.account_id,
         resolved.category_id,
         amount,
-        type,
+        normalizedType,
         description,
         transaction_date || new Date().toISOString().slice(0, 10),
         id,

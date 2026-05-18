@@ -1,12 +1,12 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useContext, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button, Container, Header, Input } from "../components";
 import { AuthContext } from "../context/AuthContext";
 import { theme } from "../theme";
 
 export default function RegisterScreen({ navigation }) {
-  const { register } = useContext(AuthContext);
+  const { register, login } = useContext(AuthContext);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,34 +14,53 @@ export default function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  const validateEmail = (value) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  const validatePassword = (value) =>
+    value.length >= 8 &&
+    /[A-Z]/.test(value) &&
+    /[a-z]/.test(value) &&
+    /[0-9]/.test(value) &&
+    /[^A-Za-z0-9]/.test(value);
+
   const handleRegister = async () => {
-    setErrors({});
-    if (!name) {
-      setErrors({ name: "El nombre es requerido" });
-      return;
+    const newErrors = {};
+
+    if (!name.trim()) {
+      newErrors.name = "El nombre es requerido";
     }
-    if (!email) {
-      setErrors({ email: "El correo es requerido" });
-      return;
+    if (!email.trim()) {
+      newErrors.email = "El correo es requerido";
+    } else if (!validateEmail(email)) {
+      newErrors.email = "Ingresa un correo electrónico válido";
     }
     if (!password) {
-      setErrors({ password: "La contraseña es requerida" });
-      return;
+      newErrors.password = "La contraseña es requerida";
+    } else if (!validatePassword(password)) {
+      newErrors.password =
+        "Mínimo 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial";
     }
-    if (password !== confirmPassword) {
-      setErrors({ confirmPassword: "Las contraseñas no coinciden" });
-      return;
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Confirma tu contraseña";
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "Las contraseñas no coinciden";
     }
-    if (password.length < 6) {
-      setErrors({ password: "La contraseña debe tener al menos 6 caracteres" });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
+    setErrors({});
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(name.trim(), email.trim(), password);
+      await login(email.trim(), password);
     } catch (error) {
-      setErrors({ general: "Error al crear la cuenta" });
+      const message =
+        error?.response?.data?.message || "Error al crear la cuenta";
+      Alert.alert("Error", message);
     } finally {
       setLoading(false);
     }

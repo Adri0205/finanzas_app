@@ -68,9 +68,11 @@ export default function TransactionForm({
     initialValues.description || "",
   );
 
-  const [transactionDate, setTransactionDate] = useState(
-    initialValues.transaction_date || new Date().toISOString().slice(0, 10),
-  );
+  const [transactionDate, setTransactionDate] = useState(() => {
+    if (initialValues.transaction_date) return initialValues.transaction_date;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  });
 
   const [customCategory, setCustomCategory] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -84,9 +86,11 @@ export default function TransactionForm({
     setPaymentMethod(initialValues.payment_method || "");
     setDescription(initialValues.description || "");
 
-    setTransactionDate(
-      initialValues.transaction_date || new Date().toISOString().slice(0, 10),
-    );
+    const localToday = () => {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    };
+    setTransactionDate(initialValues.transaction_date || localToday());
 
     setCustomCategory("");
   }, [initialValues]);
@@ -204,16 +208,20 @@ export default function TransactionForm({
 
         {showDatePicker && (
           <DateTimePicker
-            value={new Date(transactionDate)}
+            value={(() => {
+              const [y, m, d] = transactionDate.split("-").map(Number);
+              return new Date(y, m - 1, d);
+            })()}
             mode="date"
             display="default"
             onChange={(event, selectedDate) => {
               setShowDatePicker(false);
 
               if (selectedDate) {
-                const formattedDate = selectedDate.toISOString().slice(0, 10);
-
-                setTransactionDate(formattedDate);
+                const y = selectedDate.getFullYear();
+                const m = String(selectedDate.getMonth() + 1).padStart(2, "0");
+                const d = String(selectedDate.getDate()).padStart(2, "0");
+                setTransactionDate(`${y}-${m}-${d}`);
               }
             }}
           />
