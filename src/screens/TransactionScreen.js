@@ -51,14 +51,12 @@ export default function TransactionsScreen({ navigation }) {
 
   const obtenerTransacciones = async () => {
     try {
-      const [transResponse, catResponse, accResponse] = await Promise.all([]);
+      const [transResponse, accResponse] = await Promise.all([
+        API.get("/transactions"),
+        API.get("/accounts"),
+      ]);
       setTransactions(transResponse.data || []);
-      setCategories(
-        (catResponse.data || []).map((cat) => ({
-          value: cat.name || cat,
-          label: cat.name || cat,
-        })),
-      );
+      setCategories(categoryOptions);
       setAccounts(
         (accResponse.data || []).map((acc) => ({
           value: acc.name || acc,

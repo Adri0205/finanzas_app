@@ -39,9 +39,14 @@ const getOrCreateEntityId = (type, user_id, name) =>
 const resolveEntityIds = async ({
   user_id,
   account_id,
+  account_name,
   category_id,
   category_name,
 }) => {
+  const resolvedAccountId = account_id
+    ? account_id
+    : await getOrCreateEntityId("account", user_id, account_name);
+
   const resolvedCategoryId = category_id
     ? category_id
     : await getOrCreateEntityId("category", user_id, category_name);
@@ -106,9 +111,10 @@ const getTransactions = (req, res) => {
 
 const createTransaction = async (req, res) => {
   const user_id = req.user.id;
-
+  console.log("user id:", user_id);
   const {
     account_id,
+    payment_method,
     category_id,
     category_name,
     amount,
@@ -116,7 +122,7 @@ const createTransaction = async (req, res) => {
     description,
     transaction_date,
   } = req.body;
-
+  console.log("body:", req.body);
   if (!amount || !type || !(category_id || category_name)) {
     return res.status(400).json({ message: "Faltan campos obligatorios" });
   }
@@ -125,10 +131,11 @@ const createTransaction = async (req, res) => {
     const resolved = await resolveEntityIds({
       user_id,
       account_id,
+      account_name: payment_method,
       category_id,
       category_name,
     });
-
+    console.log("resolved", resolved);
     const sql = `
       INSERT INTO transactions
       (
@@ -163,6 +170,7 @@ const createTransaction = async (req, res) => {
       },
     );
   } catch (error) {
+    console.log("error db", error);
     res.status(500).json(error);
   }
 };
@@ -173,6 +181,7 @@ const updateTransaction = async (req, res) => {
 
   const {
     account_id,
+    payment_method,
     category_id,
     category_name,
     amount,
@@ -189,6 +198,7 @@ const updateTransaction = async (req, res) => {
     const resolved = await resolveEntityIds({
       user_id,
       account_id,
+      account_name: payment_method,
       category_id,
       category_name,
     });

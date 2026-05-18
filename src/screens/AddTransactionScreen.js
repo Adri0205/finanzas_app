@@ -6,12 +6,11 @@ import TransactionForm from "../components/TransactionForm";
 export default function AddTransactionScreen({ navigation }) {
   const guardarTransaccion = async (transaction) => {
     try {
+      console.log("llamando a api");
       await API.post("/transactions", transaction);
       navigation.navigate("Transactions");
     } catch (error) {
-      console.log(
-        error?.response?.data || error?.message || "Error desconocido",
-      );
+      console.log("error en api", error);
     }
   };
 
